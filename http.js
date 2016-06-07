@@ -8,6 +8,7 @@ var url = require('url');
 var geolib = require('geolib');
 var fs = require('fs');
 var xml2js = require('xml2js');
+var InNOut = require('in-n-out');
 
 //
 // some globals for this crappy HTTP server
@@ -16,6 +17,24 @@ var xml2js = require('xml2js');
 //       move to config file
 //       find closest should not find Vashon if not on Vashon, etc
 //
+
+
+// Boundary points create rough polygon around Vashon.
+var gf = new InNOut.Geofence([
+                        [47.30856866998022, -122.4810791015625],
+                        [47.33510005753562, -122.54837036132812],
+                        [47.37556964623242, -122.53120422363281],
+                        [47.43087434400905, -122.52639770507812],
+                        [47.49076091764255, -122.49824523925781],
+                        [47.51905562097127, -122.48039245605469],
+                        [47.50514209901774, -122.43644714355469],
+                        [47.458272792347074, -122.41447448730469],
+                        [47.413684985326796, -122.40211486816406],
+                        [47.37835950831887, -122.3602294921875],
+                        [47.354640975385315, -122.40554809570312],
+                        [47.32067235909414, -122.45567321777344],
+                        [47.30856866998022, -122.4810791015625]],
+                        100)
 
 var terminals = [];
 terminals["14"] =  // FAUNTLEROY / VASHON
@@ -57,7 +76,7 @@ terminals["8"] = // Port Townsend / Coupeville
 terminals["1"] = // Pt. Defiance / Tahlequah 
 {
     "Pt. Defiance Ferry Dock": {latitude: 47.8089375, longitude: -122.385275},  
-    "Tahlequah Ferry Dock": {latitude: 47.7959266, longitude: -122.4963502},      
+    "Tahlequah Ferry Dock": {latitude: 47.3327917, longitude: -122.5148658},
 };
 terminals["5"] = // Seattle / Bainbridge Island
 {
@@ -118,6 +137,16 @@ function loadSchedule(route, cache) {
     }
 }
 
+function clearTerminals(isInVashon, terminalSet){
+  var tempTerminalSet = {}
+  for(terminal in terminalSet){
+    //Clearing invalid terminals from the terminal set whether or not we are in vashon.
+    if(isInVashon == gf.inside([terminalSet[terminal]["latitude"], terminalSet[terminal]["longitude"]])){
+      tempTerminalSet[terminal] = terminalSet[terminal];
+    }
+  }
+  return tempTerminalSet;
+}
 //
 // ferry times request
 //
@@ -130,6 +159,9 @@ function loadSchedule(route, cache) {
 dispatcher.onGet("/v0/ferry", function(req, res) {
     var route = 0;
     var location = { latitude: 0, longitude: 0 }
+    var isInVashon = null;
+    var terminalSet = {};
+    var responseDict = {};
 
     // parse the query data
     queryData = url.parse(req.url, true).query;
@@ -137,23 +169,37 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     location.latitude = queryData.lat;
     location.longitude = queryData.long;
 
-    // find the closest location for the route
+    //Check if the location is inside of vashon
+    isInVashon = gf.inside([location.latitude, location.longitude]);
+    //Clearing improper terminals from the terminal set based on vashon location.
+    if(isInVashon){
+      terminalSet = clearTerminals(isInVashon, terminals[route]);
+    }
+    else{
+      terminalSet = clearTerminals(isInVashon, terminals[route]);
+    }
 
-    closest = geolib.findNearest(location, terminals[route]);
+    // find the closest location for the route
+    closest = geolib.findNearest(location, terminalSet);
 
     console.log('Path Hit: ' + req.url + '\nClosest Ferry Terminal: ' + closest['key'] + ', ' + 
     	closest['distance'] + ' meters away' + "\n\n");
     console.dir(schedule[route]);
 
+    //Build the dictionary we will be using to write results
+    responseDict.deportingTerminal = closest['key'];
+    responseDict.location = terminals[route][closest['key']];
+    responseDict.times = [
+                          //Sometimes the route does not have times populated. Use ternary to prevent null reference error.
+                          schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][0] : "unknown Times",
+                          schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][1] : "unknown Times"
+                          ];
+
     // time to write our results
     res.writeHead(200, {'Content-Type': 'application/json'});
     res.write(JSON.stringify( 
-	{ departingTerminal: closest['key'], 
-          location: terminals[route][closest['key']] ,
-	  times: [  
-		schedule[route][closest['key']]["Times"][0]["SchedTime"][0], 
-		schedule[route][closest['key']]["Times"][0]["SchedTime"][1] 
-          ],
+        { 
+          responseDict
         }
    ));
    res.end('');
