@@ -161,7 +161,7 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     var location = { latitude: 0, longitude: 0 }
     var isInVashon = null;
     var terminalSet = {};
-    var responseDict = {};
+    var response = {};
 
     // parse the query data
     queryData = url.parse(req.url, true).query;
@@ -187,9 +187,9 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     console.dir(schedule[route]);
 
     //Build the dictionary we will be using to write results
-    responseDict.deportingTerminal = closest['key'];
-    responseDict.location = terminals[route][closest['key']];
-    responseDict.times = [
+    response.departingTerminal = closest['key'];
+    response.location = terminals[route][closest['key']];
+    response.times = [
                           //Sometimes the route does not have times populated. Use ternary to prevent null reference error.
                           schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][0] : "unknown Times",
                           schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][1] : "unknown Times"
@@ -199,7 +199,7 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     res.writeHead(200, {'Content-Type': 'application/json'});
     res.write(JSON.stringify( 
         { 
-          responseDict
+          response
         }
    ));
    res.end('');
