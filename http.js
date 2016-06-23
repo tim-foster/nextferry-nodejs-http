@@ -18,7 +18,6 @@ var InNOut = require('in-n-out');
 //       find closest should not find Vashon if not on Vashon, etc
 //
 
-
 // Boundary points create rough polygon around Vashon.
 var gf = new InNOut.Geofence([
                         [47.30856866998022, -122.4810791015625],
@@ -89,6 +88,47 @@ terminals["3"] = // Seattle / Bremerton
     "Bremerton Ferry Dock": {latitude: 47.7959266, longitude: -122.4963502},      
 };
 
+var routes = [];
+routes["14"] =
+{
+  "routeName": "Fauntleroy / Vashon"
+};
+routes["15"] =
+{
+  "routeName": "Southworth / Vashon"
+}
+routes["13"] =
+{
+  "routeName": "Fauntleroy / Southworth"
+}
+routes["272"] =
+{
+  "routeName": "Anacortes / San Juan Islands / Sidney B.C."
+}
+routes["6"] =
+{
+  "routeName": "Edmonds / Kingston"
+}
+routes["7"] =
+{
+  "routeName": "Mukilteo / Clinton"
+}
+routes["8"] =
+{
+  "routeName": "Port Townsend / Coupeville"
+}
+routes["1"] =
+{
+  "routeName": "Pt. Defiance / Tahlequah "
+}
+routes["5"] =
+{
+  "routeName": "Seattle / Bainbridge Island"
+}
+routes["3"] =
+{
+  "routeName": "Seattle / Bremerton"
+}
 //
 // continually load all the schedules into memory 
 //
@@ -147,13 +187,14 @@ function clearTerminals(isInVashon, terminalSet){
   }
   return tempTerminalSet;
 }
+
 //
 // ferry times request
 //
 //   GET params:
-//	route: terminal route (vashon/faunt is route 14)
-//	lat: current device lat
-//	long: current device long
+//  route: terminal route (vashon/faunt is route 14)
+//  lat: current device lat
+//  long: current device long
 //
 
 dispatcher.onGet("/v0/ferry", function(req, res) {
@@ -166,11 +207,16 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     // parse the query data
     queryData = url.parse(req.url, true).query;
     route = queryData.route;
+    if(!route)
+      route = 14;
     location.latitude = queryData.lat;
     location.longitude = queryData.long;
 
     //Check if the location is inside of vashon
     isInVashon = gf.inside([location.latitude, location.longitude]);
+
+
+
     //Clearing improper terminals from the terminal set based on vashon location.
     if(isInVashon){
       terminalSet = clearTerminals(isInVashon, terminals[route]);
@@ -194,6 +240,7 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
                           schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][0] : "unknown Times",
                           schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][1] : "unknown Times"
                           ];
+    response.routeName = routes[route].routeName;
 
     // time to write our results
     res.writeHead(200, {'Content-Type': 'application/json'});
