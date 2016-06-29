@@ -1,0 +1,16 @@
+{
+  "name": "NextFerry-http",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node http.js"
+  },
+  "dependencies": {
+    "geolib": "^2.0.21",
+    "httpdispatcher": "latest",
+    "in-n-out": "^0.0.14",
+    "nodemon": "^1.9.2",
+    "rn-geolocation": "^0.0.6",
+    "xml2js":"^0.4.16"
+  }
+}

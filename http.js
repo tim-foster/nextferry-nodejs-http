@@ -144,7 +144,7 @@ function loadSchedules()
    loadSchedule(14,60);
    loadSchedule(15,60);
    loadSchedule(13,60);
-   loadSchedule(272,60);
+   //loadSchedule(272,60);
    loadSchedule(6,60);
    loadSchedule(7,60);
    loadSchedule(8,60);
@@ -161,15 +161,16 @@ function loadSchedule(route, cache) {
 
     try {
       fs.readFile(__dirname + '/schedules/route_' + route + '.xml', function(err, data) {
-        parser.parseString(data, function (err, result) {
-          var firstTerminal = Object.keys(terminals[route])[0];
-          var secondTerminal = Object.keys(terminals[route])[1];
-          schedule[route] = [];
-          schedule[route][firstTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][0];
-          schedule[route][secondTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][1];
-  	  console.dir("Route: " + route);
-          console.dir(schedule[route]); 
-          console.log('Done');
+      parser.parseString(data, function (err, result) {
+      var firstTerminal = Object.keys(terminals[route])[0];
+      var secondTerminal = Object.keys(terminals[route])[1];
+      console.log("Route: " + route);
+      schedule[route] = [];
+      schedule[route][firstTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][0];
+      schedule[route][secondTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][1];
+      console.dir("Route: " + route);
+      console.dir(schedule[route]); 
+//          console.log('Done');
         });
       });
     } catch(err) {
@@ -229,7 +230,7 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     closest = geolib.findNearest(location, terminalSet);
 
     console.log('Path Hit: ' + req.url + '\nClosest Ferry Terminal: ' + closest['key'] + ', ' + 
-    	closest['distance'] + ' meters away' + "\n\n");
+      closest['distance'] + ' meters away' + "\n\n");
     console.dir(schedule[route]);
 
     //Build the dictionary we will be using to write results
@@ -244,11 +245,7 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
 
     // time to write our results
     res.writeHead(200, {'Content-Type': 'application/json'});
-    res.write(JSON.stringify( 
-        { 
-          response
-        }
-   ));
+    res.write(JSON.stringify(response));
    res.end('');
 });    
 
