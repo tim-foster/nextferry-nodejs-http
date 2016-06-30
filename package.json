@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node http.js",
-    "test": "mocha --timeout 15000"
+    "test": "mocha --timeout 15000",
+    "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --timeout 15000 -R spec"
   },
   "dependencies": {
     "geolib": "^2.0.21",
@@ -16,7 +17,10 @@
     "xml2js": "^0.4.16"
   },
   "devDependencies": {
+    "coveralls": "^2.11.9",
+    "istanbul": "^0.4.4",
     "mocha": "^2.4.5",
+    "mocha-lcov-reporter": "^1.2.0",
     "should": "^9.0.2",
     "should-http": "0.0.4",
     "supertest": "^1.2.0"
