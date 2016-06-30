@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node http.js",
-    "test": "node test/requestTest.js"
+    "test": "mocha"
   },
   "dependencies": {
     "geolib": "^2.0.21",
