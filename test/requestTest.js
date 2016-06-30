@@ -8,8 +8,16 @@ describe('Routing', function(){
 	var url = 'http://localhost:8080';
 
 	before(function(done){
-		done();
+		var instance = server.listen(8080);
+		instance.on("listening", function(){
+			done();
+		});
+		
 	});
+
+	after(function(){
+		server.close();
+	})
 
 	describe("Won't send Query info", function(){
 		it("Return 400 status code", function(done){

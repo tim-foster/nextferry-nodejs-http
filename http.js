@@ -9,6 +9,8 @@ var geolib = require('geolib');
 var fs = require('fs');
 var xml2js = require('xml2js');
 var InNOut = require('in-n-out');
+var request = require('request');
+var util = require('util');
 
 //
 // some globals for this crappy HTTP server
@@ -17,6 +19,8 @@ var InNOut = require('in-n-out');
 //       move to config file
 //       find closest should not find Vashon if not on Vashon, etc
 //
+
+var port = process.env.PORT || '8080';
 
 // Boundary points create rough polygon around Vashon.
 var gf = new InNOut.Geofence([
@@ -136,21 +140,29 @@ routes["3"] =
 //
 
 var schedule = [];
-loadSchedules();
+//loadSchedules();
 setInterval(loadSchedules, 60 * 1000);
 
 function loadSchedules()
 {
-   loadSchedule(14,60);
-   loadSchedule(15,60);
-   loadSchedule(13,60);
-   //loadSchedule(272,60);
-   loadSchedule(6,60);
-   loadSchedule(7,60);
-   loadSchedule(8,60);
-   loadSchedule(1,60);
-   loadSchedule(5,60);
-   loadSchedule(3,60);
+  return new Promise((resolve, reject) => {
+    Promise.all(
+      [
+        loadSchedule(14,60),
+        loadSchedule(15,60),
+        loadSchedule(13,60),
+        //loadSchedule(272,60);
+        loadSchedule(6,60),
+        loadSchedule(7,60),
+        loadSchedule(8,60),
+        loadSchedule(1,60),
+        loadSchedule(5,60),
+        loadSchedule(3,60)
+      ])
+    .then(() => {
+      resolve();
+    })
+  })
 }
  
 function loadSchedule(route, cache) {
@@ -158,8 +170,34 @@ function loadSchedule(route, cache) {
 
     // need to load the XML file and parse schedule information
     //console.log("Loading XML: " + __dirname + '/schedules/route_' + route + '.xml');
-
     try {
+      var apiRequestString = "http://www.wsdot.wa.gov/ferries/api/schedule/rest/scheduletoday/%s/true?apiaccesscode=45d2f914-dde8-4b2c-9c13-2d21f08c407c";
+      var options = {
+        url: util.format(apiRequestString, route),
+        headers: {
+          'Accept':'application/json'
+        },
+        method: 'GET'
+      };
+      return new Promise((resolve, reject) => {
+        request(options, function(error, response, body){
+          if(error){
+            console.log(error);
+          }
+          else{
+            var info = JSON.parse(body);
+            // console.dir(info);
+            var firstTerminal = Object.keys(terminals[route])[0];
+            var secondTerminal = Object.keys(terminals[route])[1];
+            schedule[route] = [];
+            schedule[route][firstTerminal] = info["TerminalCombos"][0];
+            schedule[route][secondTerminal] = info["TerminalCombos"][1];
+            resolve();
+          }
+        });
+      })
+      
+      /*
       fs.readFile(__dirname + '/schedules/route_' + route + '.xml', function(err, data) {
         parser.parseString(data, function (err, result) {
         var firstTerminal = Object.keys(terminals[route])[0];
@@ -170,9 +208,11 @@ function loadSchedule(route, cache) {
         schedule[route][secondTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][1];
         //console.dir("Route: " + route);
         //console.dir(schedule[route]); 
-//          console.log('Done');
+        //console.log('Done');
         });
       });
+      */
+
     } catch(err) {
         console.log("Failed to load XML: " + err);
     }
@@ -239,8 +279,10 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     response.location = terminals[route][closest['key']];
     response.times = [
                           //Sometimes the route does not have times populated. Use ternary to prevent null reference error.
-                          schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][0] : "unknown Times",
-                          schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][1] : "unknown Times"
+                          // schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][0] : "unknown Times",
+                          // schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0]["SchedTime"][1] : "unknown Times"
+                          schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][0] : "unknown Times",
+                          schedule[route][closest['key']]["Times"] != "" ? schedule[route][closest['key']]["Times"][1] : "unknown Times"
                           ];
     response.routeName = routes[route].routeName;
 
@@ -271,9 +313,39 @@ function handleRequest(request, response){
 }
 
 // create the http server
-var server = http.createServer(handleRequest);
+this.server = http.createServer(handleRequest);
 
-// start our http server
-server.listen(8080, function(){
-   console.log("Server running");
-});
+if(require.main === module){
+  // start our http server
+  // this.server.listen(8080, function(){
+  //    console.log("Server running");
+  // });
+  loadSchedules()
+    .then(() =>{
+      console.log('Listening on: '+ port);
+      this.server.listen(port);
+    });
+
+} else {
+  exports.server = this.server;
+
+  exports.listen = function(port){
+    loadSchedules()
+      .then(() =>{
+        this.server.listen(port);
+      });
+    return this.server;
+
+  };
+
+  exports.close = function(){
+    this.server.close();
+  };
+
+
+}
+
+// // start our http server
+// server.listen(8080, function(){
+//    console.log("Server running");
+// });
