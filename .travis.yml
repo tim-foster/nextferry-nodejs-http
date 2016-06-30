@@ -2,7 +2,3 @@ language: node_js
 
 node_js:
   - "6"
-
-addons:
-    code_climate:
-        repo_token: bb9d24ab459540c0112459b4eaf31a6c009a17106910c2e9593fd48b0e500590
