@@ -119,7 +119,7 @@ routes["8"] =
 }
 routes["1"] =
 {
-  "routeName": "Pt. Defiance / Tahlequah "
+  "routeName": "Pt. Defiance / Tahlequah"
 }
 routes["5"] =
 {
@@ -157,19 +157,19 @@ function loadSchedule(route, cache) {
     var parser = new xml2js.Parser();
 
     // need to load the XML file and parse schedule information
-    console.log("Loading XML: " + __dirname + '/schedules/route_' + route + '.xml');
+    //console.log("Loading XML: " + __dirname + '/schedules/route_' + route + '.xml');
 
     try {
       fs.readFile(__dirname + '/schedules/route_' + route + '.xml', function(err, data) {
-      parser.parseString(data, function (err, result) {
-      var firstTerminal = Object.keys(terminals[route])[0];
-      var secondTerminal = Object.keys(terminals[route])[1];
-      console.log("Route: " + route);
-      schedule[route] = [];
-      schedule[route][firstTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][0];
-      schedule[route][secondTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][1];
-      console.dir("Route: " + route);
-      console.dir(schedule[route]); 
+        parser.parseString(data, function (err, result) {
+        var firstTerminal = Object.keys(terminals[route])[0];
+        var secondTerminal = Object.keys(terminals[route])[1];
+        //console.log("Route: " + route);
+        schedule[route] = [];
+        schedule[route][firstTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][0];
+        schedule[route][secondTerminal] = result["SchedResponse"]["TerminalCombos"][0]["SchedTerminalCombo"][1];
+        //console.dir("Route: " + route);
+        //console.dir(schedule[route]); 
 //          console.log('Done');
         });
       });
@@ -199,6 +199,7 @@ function clearTerminals(isInVashon, terminalSet){
 //
 
 dispatcher.onGet("/v0/ferry", function(req, res) {
+  try{
     var route = 0;
     var location = { latitude: 0, longitude: 0 }
     var isInVashon = null;
@@ -229,9 +230,9 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     // find the closest location for the route
     closest = geolib.findNearest(location, terminalSet);
 
-    console.log('Path Hit: ' + req.url + '\nClosest Ferry Terminal: ' + closest['key'] + ', ' + 
-      closest['distance'] + ' meters away' + "\n\n");
-    console.dir(schedule[route]);
+    //console.log('Path Hit: ' + req.url + '\nClosest Ferry Terminal: ' + closest['key'] + ', ' + 
+    //  closest['distance'] + ' meters away' + "\n\n");
+    //console.dir(schedule[route]);
 
     //Build the dictionary we will be using to write results
     response.departingTerminal = closest['key'];
@@ -246,7 +247,13 @@ dispatcher.onGet("/v0/ferry", function(req, res) {
     // time to write our results
     res.writeHead(200, {'Content-Type': 'application/json'});
     res.write(JSON.stringify(response));
-   res.end('');
+    res.end('');
+  } catch(err){
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.write(JSON.stringify({routeName:"Improper Request"}));
+    res.end('');
+  }
+  
 });    
 
 //
@@ -267,6 +274,6 @@ function handleRequest(request, response){
 var server = http.createServer(handleRequest);
 
 // start our http server
-server.listen(80, function(){
+server.listen(8080, function(){
    console.log("Server running");
 });
